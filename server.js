@@ -5,6 +5,9 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import appointmentRoutes from "./routes/appointmentRoutes.js";
+import doctorAuthRoutes from "./routes/doctorAuthRoutes.js";
+import doctorAppointmentRoutes from "./routes/doctorAppointmentRoutes.js";
+import doctorPatientRoutes from "./routes/doctorPatientRoutes.js";
 
 dotenv.config();
 
@@ -41,6 +44,19 @@ app.get("/", (req, res) => {
 
 // Patient authentication
 app.use("/api/auth", authRoutes);
+
+// Doctor authentication
+app.use("/api/doctor/auth", doctorAuthRoutes);
+
+app.use(
+  "/api/doctor/appointments",
+  doctorAppointmentRoutes
+);
+
+app.use(
+  "/api/doctor/patients",
+  doctorPatientRoutes
+);
 
 // Appointments
 app.use("/api/appointments", appointmentRoutes);
