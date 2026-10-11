@@ -8,6 +8,7 @@ import appointmentRoutes from "./routes/appointmentRoutes.js";
 import doctorAuthRoutes from "./routes/doctorAuthRoutes.js";
 import doctorAppointmentRoutes from "./routes/doctorAppointmentRoutes.js";
 import doctorPatientRoutes from "./routes/doctorPatientRoutes.js";
+import consultationRoutes from "./routes/consultationRoutes.js";
 
 dotenv.config();
 
@@ -57,6 +58,11 @@ app.use(
   "/api/doctor/patients",
   doctorPatientRoutes
 );
+
+app.use(
+  "/api/doctor/consultations",
+  consultationRoutes
+);  
 
 // Appointments
 app.use("/api/appointments", appointmentRoutes);
