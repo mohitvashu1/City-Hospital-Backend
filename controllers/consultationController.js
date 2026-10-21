@@ -1,3 +1,4 @@
+
 import Consultation from "../models/Consultation.js";
 import Doctor from "../models/Doctor.js";
 import Appointment from "../models/Appointment.js";
@@ -16,20 +17,12 @@ export const createConsultation = async (req, res) => {
       followUpDate,
     } = req.body;
 
-    // ==========================================
-    // Validate appointment ID
-    // ==========================================
-
     if (!appointmentId) {
       return res.status(400).json({
         success: false,
         message: "Appointment ID is required",
       });
     }
-
-    // ==========================================
-    // Find logged-in doctor
-    // ==========================================
 
     const doctor = await Doctor.findOne({
       userId: req.user.id,
@@ -43,13 +36,7 @@ export const createConsultation = async (req, res) => {
       });
     }
 
-    // ==========================================
-    // Find appointment
-    // ==========================================
-
-    const appointment = await Appointment.findById(
-      appointmentId
-    );
+    const appointment = await Appointment.findById(appointmentId);
 
     if (!appointment) {
       return res.status(404).json({
@@ -58,28 +45,16 @@ export const createConsultation = async (req, res) => {
       });
     }
 
-    // ==========================================
-    // Make sure appointment belongs to doctor
-    // ==========================================
-
-    if (
-      appointment.doctorId.toString() !==
-      doctor._id.toString()
-    ) {
+    if (String(appointment.doctorId) !== String(doctor._id)) {
       return res.status(403).json({
         success: false,
         message: "You are not authorized for this appointment",
       });
     }
 
-    // ==========================================
-    // Prevent duplicate consultation
-    // ==========================================
-
-    const existingConsultation =
-      await Consultation.findOne({
-        appointmentId: appointment._id,
-      });
+    const existingConsultation = await Consultation.findOne({
+      appointmentId: appointment._id,
+    });
 
     if (existingConsultation) {
       return res.status(409).json({
@@ -89,17 +64,11 @@ export const createConsultation = async (req, res) => {
       });
     }
 
-    // ==========================================
-    // Create consultation
-    // ==========================================
-
     const consultation = await Consultation.create({
       patientId: appointment.patientId,
       doctorId: doctor._id,
       appointmentId: appointment._id,
-
       symptoms: symptoms || [],
-
       vitals: {
         temperature: vitals?.temperature,
         bloodPressure: vitals?.bloodPressure,
@@ -107,47 +76,30 @@ export const createConsultation = async (req, res) => {
         spo2: vitals?.spo2,
         weight: vitals?.weight,
       },
-
       examination: examination || "",
-
       diagnosis: diagnosis || [],
-
       tests: tests || [],
-
       medicines: medicines || [],
-
       advice: advice || "",
-
       followUpDate: followUpDate || null,
-
       status: "DRAFT",
     });
-
-    // ==========================================
-    // Update appointment status
-    // ==========================================
 
     appointment.status = "IN_CONSULTATION";
     await appointment.save();
 
-    // ==========================================
-    // Populate response
-    // ==========================================
-
-    const populatedConsultation =
-      await Consultation.findById(consultation._id)
-        .populate(
-          "patientId",
-          "name phone dateOfBirth gender address"
-        )
-        .populate(
-          "doctorId",
-          "name specialization qualification registrationNumber department"
-        )
-        .populate(
-          "appointmentId",
-          "appointmentId appointmentDate appointmentTime status reason"
-        );
+    const populatedConsultation = await Consultation.findById(
+      consultation._id
+    )
+      .populate("patientId", "name phone dateOfBirth gender address")
+      .populate(
+        "doctorId",
+        "name specialization qualification registrationNumber department"
+      )
+      .populate(
+        "appointmentId",
+        "appointmentId appointmentDate appointmentTime status reason"
+      );
 
     return res.status(201).json({
       success: true,
@@ -155,10 +107,7 @@ export const createConsultation = async (req, res) => {
       consultation: populatedConsultation,
     });
   } catch (error) {
-    console.error(
-      "Create consultation error:",
-      error
-    );
+    console.error("Create consultation error:", error);
 
     return res.status(500).json({
       success: false,
@@ -166,7 +115,7 @@ export const createConsultation = async (req, res) => {
       error: error.message,
     });
   }
-};  
+};
 
 // GET /api/doctor/consultations/:consultationId
 export const getConsultationById = async (req, res) => {
@@ -189,10 +138,7 @@ export const getConsultationById = async (req, res) => {
       _id: consultationId,
       doctorId: doctor._id,
     })
-      .populate(
-        "patientId",
-        "name phone dateOfBirth gender address"
-      )
+      .populate("patientId", "name phone dateOfBirth gender address")
       .populate(
         "doctorId",
         "name specialization qualification department"
@@ -224,7 +170,8 @@ export const getConsultationById = async (req, res) => {
   }
 };
 
-
+// PATCH /api/doctor/consultations/:consultationId
+// Update a draft or correct an already finalized consultation.
 export const updateConsultationDraft = async (req, res) => {
   try {
     const { consultationId } = req.params;
@@ -253,12 +200,7 @@ export const updateConsultationDraft = async (req, res) => {
       });
     }
 
-    if (consultation.status !== "DRAFT") {
-      return res.status(409).json({
-        success: false,
-        message: "Only draft consultations can be updated",
-      });
-    }
+    const wasFinalized = consultation.status === "FINALIZED";
 
     const allowedFields = [
       "symptoms",
@@ -294,19 +236,22 @@ export const updateConsultationDraft = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Consultation draft updated successfully",
+      message: wasFinalized
+        ? "Finalized consultation corrections saved successfully"
+        : "Consultation draft updated successfully",
       consultation: updatedConsultation,
     });
   } catch (error) {
-    console.error("Update consultation draft error:", error);
+    console.error("Update consultation error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to update consultation draft",
+      message: "Failed to update consultation",
     });
   }
 };
 
+// PATCH /api/doctor/consultations/:consultationId/finalize
 export const finalizeConsultation = async (req, res) => {
   try {
     const { consultationId } = req.params;
@@ -370,3 +315,114 @@ export const finalizeConsultation = async (req, res) => {
   }
 };
 
+// GET /api/doctor/consultations/appointment/:appointmentId
+export const getConsultationByAppointment = async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+
+    const doctor = await Doctor.findOne({
+      userId: req.user.id,
+      active: true,
+    });
+
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: "Doctor profile not found",
+      });
+    }
+
+    const appointment = await Appointment.findById(appointmentId);
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found",
+      });
+    }
+
+    if (String(appointment.doctorId) !== String(doctor._id)) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized for this appointment",
+      });
+    }
+
+    const consultation = await Consultation.findOne({
+      appointmentId: appointment._id,
+      doctorId: doctor._id,
+    })
+      .populate("patientId", "name phone dateOfBirth gender address")
+      .populate(
+        "doctorId",
+        "name specialization qualification department"
+      )
+      .populate(
+        "appointmentId",
+        "appointmentId appointmentDate appointmentTime status reason"
+      );
+
+    if (!consultation) {
+      return res.status(404).json({
+        success: false,
+        message: "No consultation exists for this appointment yet",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      consultation,
+    });
+  } catch (error) {
+    console.error("Get consultation by appointment error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch consultation",
+    });
+  }
+};
+
+// GET /api/doctor/consultations/patient/:patientId
+export const getPatientConsultations = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+
+    const doctor = await Doctor.findOne({
+      userId: req.user.id,
+      active: true,
+    });
+
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: "Doctor profile not found",
+      });
+    }
+
+    const consultations = await Consultation.find({
+      patientId,
+      doctorId: doctor._id,
+    })
+      .sort({ createdAt: -1 })
+      .populate(
+        "appointmentId",
+        "appointmentId appointmentDate appointmentTime status reason"
+      )
+      .select(
+        "symptoms vitals examination diagnosis tests medicines advice followUpDate status createdAt updatedAt appointmentId"
+      );
+
+    return res.status(200).json({
+      success: true,
+      consultations,
+    });
+  } catch (error) {
+    console.error("Get patient consultations error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch patient consultations",
+    });
+  }
+};

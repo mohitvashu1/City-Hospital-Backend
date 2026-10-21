@@ -1,3 +1,4 @@
+
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -9,6 +10,7 @@ import doctorAuthRoutes from "./routes/doctorAuthRoutes.js";
 import doctorAppointmentRoutes from "./routes/doctorAppointmentRoutes.js";
 import doctorPatientRoutes from "./routes/doctorPatientRoutes.js";
 import consultationRoutes from "./routes/consultationRoutes.js";
+import Doctor from "./models/Doctor.js";
 
 dotenv.config();
 
@@ -40,13 +42,15 @@ app.get("/", (req, res) => {
 });
 
 // ================================
-// Routes
+// Patient Authentication
 // ================================
 
-// Patient authentication
 app.use("/api/auth", authRoutes);
 
-// Doctor authentication
+// ================================
+// Doctor Routes
+// ================================
+
 app.use("/api/doctor/auth", doctorAuthRoutes);
 
 app.use(
@@ -62,10 +66,43 @@ app.use(
 app.use(
   "/api/doctor/consultations",
   consultationRoutes
-);  
+);
 
-// Appointments
+// ================================
+// Patient Appointments
+// ================================
+
 app.use("/api/appointments", appointmentRoutes);
+
+// ================================
+// Public Active Doctors List
+// Used by Book Appointment Modal
+// ================================
+
+app.get("/api/doctors", async (req, res) => {
+  try {
+    const doctors = await Doctor.find({ active: true })
+      .select("name specialization qualification department")
+      .sort({ name: 1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      count: doctors.length,
+      doctors,
+    });
+  } catch (error) {
+    console.error(
+      "Get public doctors error:",
+      error.message
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to load doctors",
+    });
+  }
+});
 
 // ================================
 // 404 Handler
