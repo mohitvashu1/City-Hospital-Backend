@@ -1,7 +1,8 @@
 
 import jwt from "jsonwebtoken";
 
-export const protect = (req, res, next) => {
+// Verify JWT for any authenticated role
+export const authenticateToken = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -19,10 +20,10 @@ export const protect = (req, res, next) => {
       process.env.JWT_SECRET
     );
 
-    if (decoded.role !== "patient" || !decoded.id) {
-      return res.status(403).json({
+    if (!decoded.id || !decoded.role) {
+      return res.status(401).json({
         success: false,
-        message: "Access denied",
+        message: "Invalid token payload",
       });
     }
 
@@ -34,4 +35,18 @@ export const protect = (req, res, next) => {
       message: "Invalid or expired token",
     });
   }
+};
+
+// Keep patient-only authorization unchanged
+export const protect = (req, res, next) => {
+  return authenticateToken(req, res, () => {
+    if (req.user.role !== "patient") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
+    }
+
+    next();
+  });
 };

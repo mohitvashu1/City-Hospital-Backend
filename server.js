@@ -1,4 +1,3 @@
-
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -10,6 +9,12 @@ import doctorAuthRoutes from "./routes/doctorAuthRoutes.js";
 import doctorAppointmentRoutes from "./routes/doctorAppointmentRoutes.js";
 import doctorPatientRoutes from "./routes/doctorPatientRoutes.js";
 import consultationRoutes from "./routes/consultationRoutes.js";
+
+// Super Admin and Staff Routes
+import adminAuthRoutes from "./routes/adminAuthRoutes.js";
+import staffAuthRoutes from "./routes/staffAuthRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+
 import Doctor from "./models/Doctor.js";
 
 dotenv.config();
@@ -46,6 +51,24 @@ app.get("/", (req, res) => {
 // ================================
 
 app.use("/api/auth", authRoutes);
+
+// ================================
+// Super Admin Authentication
+// ================================
+
+app.use("/api/admin/auth", adminAuthRoutes);
+
+// ================================
+// Staff Authentication
+// ================================
+
+app.use("/api/staff/auth", staffAuthRoutes);
+
+// ================================
+// Super Admin Management APIs
+// ================================
+
+app.use("/api/admin", adminRoutes);
 
 // ================================
 // Doctor Routes
@@ -116,17 +139,58 @@ app.use((req, res) => {
 });
 
 // ================================
+// Global Error Handler
+// ================================
+
+app.use((error, req, res, next) => {
+  console.error("API error:", error.message);
+
+  if (res.headersSent) {
+    return next(error);
+  }
+
+  if (error.type === "entity.too.large") {
+    return res.status(413).json({
+      success: false,
+      message: "Request body is too large",
+    });
+  }
+
+  if (error instanceof SyntaxError && "body" in error) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid JSON request body",
+    });
+  }
+
+  return res.status(error.status || 500).json({
+    success: false,
+    message:
+      error.status && error.status < 500
+        ? error.message
+        : "Internal server error",
+  });
+});
+
+// ================================
 // Start Server
 // ================================
 
 const startServer = async () => {
-  if (
-    !process.env.MONGODB_URI ||
-    !process.env.JWT_SECRET ||
-    !process.env.AADHAAR_HASH_SECRET
-  ) {
+  const requiredVariables = [
+    "MONGODB_URI",
+    "JWT_SECRET",
+    "AADHAAR_HASH_SECRET",
+    "CLIENT_URL",
+  ];
+
+  const missingVariables = requiredVariables.filter(
+    (key) => !process.env[key]?.trim()
+  );
+
+  if (missingVariables.length > 0) {
     throw new Error(
-      "Required environment variables are missing"
+      `Missing environment variables: ${missingVariables.join(", ")}`
     );
   }
 
