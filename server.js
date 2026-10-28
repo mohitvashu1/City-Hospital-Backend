@@ -13,6 +13,7 @@ import consultationRoutes from "./routes/consultationRoutes.js";
 // Super Admin and Staff Routes
 import adminAuthRoutes from "./routes/adminAuthRoutes.js";
 import staffAuthRoutes from "./routes/staffAuthRoutes.js";
+import staffRoutes from "./routes/staffRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 
 import Doctor from "./models/Doctor.js";
@@ -63,6 +64,7 @@ app.use("/api/admin/auth", adminAuthRoutes);
 // ================================
 
 app.use("/api/staff/auth", staffAuthRoutes);
+app.use("/api/staff", staffRoutes);
 
 // ================================
 // Super Admin Management APIs
