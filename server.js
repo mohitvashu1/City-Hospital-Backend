@@ -1,3 +1,4 @@
+
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -64,6 +65,10 @@ app.use("/api/admin/auth", adminAuthRoutes);
 // ================================
 
 app.use("/api/staff/auth", staffAuthRoutes);
+
+// Receptionist APIs:
+// Patient/appointment operations, queue updates,
+// and OPD fee-payment status.
 app.use("/api/staff", staffRoutes);
 
 // ================================

@@ -52,6 +52,30 @@ const appointmentSchema = new mongoose.Schema(
       trim: true,
       maxlength: 500,
     },
+
+    // OPD fee belongs to an individual appointment/visit.
+    feePayment: {
+      status: {
+        type: String,
+        enum: ["NOT_PAID", "PAID"],
+        default: "NOT_PAID",
+        index: true,
+      },
+      amount: {
+        type: Number,
+        min: 0,
+        default: 0,
+      },
+      method: {
+        type: String,
+        enum: ["CASH", "UPI", "CARD"],
+      },
+      paidAt: Date,
+      receivedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    },
   },
   {
     timestamps: true,
