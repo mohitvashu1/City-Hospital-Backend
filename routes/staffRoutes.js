@@ -259,4 +259,36 @@ router.patch("/appointments/:id/fee", async (req, res) => {
   }
 });
 
+
+// Discharge an admitted patient. The URL parameter must be the Admission document _id.
+router.patch("/admissions/:id/discharge", async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!/^[a-f\d]{24}$/i.test(id)) {
+      return res.status(400).json({ success: false, message: "Invalid admission ID" });
+    }
+
+    const admission = await Admission.findById(id);
+    if (!admission) {
+      return res.status(404).json({ success: false, message: "Admission record not found" });
+    }
+    if (admission.status === "DISCHARGED") {
+      return res.status(409).json({ success: false, message: "This patient has already been discharged" });
+    }
+
+    admission.status = "DISCHARGED";
+    admission.dischargeDate = new Date();
+    await admission.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Patient discharged successfully",
+      admission,
+    });
+  } catch (error) {
+    console.error("Staff discharge error:", error.message);
+    return res.status(500).json({ success: false, message: "Unable to discharge patient" });
+  }
+});
+
 export default router;
