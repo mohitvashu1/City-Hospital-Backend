@@ -18,6 +18,7 @@ import staffRoutes from "./routes/staffRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 
 import Doctor from "./models/Doctor.js";
+import User from "./models/User.js";
 
 dotenv.config();
 
@@ -111,8 +112,13 @@ app.use("/api/appointments", appointmentRoutes);
 
 app.get("/api/doctors", async (req, res) => {
   try {
-    const doctors = await Doctor.find({ active: true })
-      .select("name specialization qualification department")
+    const activeDoctorUsers = await User.find({ role: "DOCTOR", active: true }).distinct("_id");
+
+    const doctors = await Doctor.find({
+      active: true,
+      userId: { $in: activeDoctorUsers },
+    })
+      .select("name specialization qualification department image description experience tags")
       .sort({ name: 1 })
       .lean();
 

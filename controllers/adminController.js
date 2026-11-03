@@ -89,15 +89,37 @@ export const createDoctorAccount = async (req, res) => {
     const registrationNumber = String(req.body?.registrationNumber || "").trim();
     const phone = String(req.body?.phone || "").trim();
     const department = String(req.body?.department || "").trim();
+    const image = String(req.body?.image || "").trim();
+    const description = String(req.body?.description || "").trim();
+    const experience = String(req.body?.experience || "").trim();
+    const rawTags = Array.isArray(req.body?.tags) ? req.body.tags : String(req.body?.tags || "").split(",");
+    const tags = [...new Set(rawTags.map((tag) => String(tag).trim()).filter(Boolean))].slice(0, 12);
     if (!name || name.length > 100 || !validEmail(email) || !specialization || !qualification || !registrationNumber) {
       return res.status(400).json({ success: false, message: "Name, valid email, specialization, qualification and registration number are required" });
     }
     if (password.length < 12 || password.length > 128) return res.status(400).json({ success: false, message: "Password must be 12–128 characters" });
     if (phone && !/^[6-9]\d{9}$/.test(phone)) return res.status(400).json({ success: false, message: "Phone must be a valid 10-digit Indian mobile number" });
+    if (image.length > 500 || description.length > 1200 || experience.length > 120 || tags.some((tag) => tag.length > 50)) {
+      return res.status(400).json({ success: false, message: "Profile image, description, experience or tags exceed allowed length" });
+    }
     if (await User.exists({ email })) return res.status(409).json({ success: false, message: "Email is already registered" });
     if (await Doctor.exists({ registrationNumber })) return res.status(409).json({ success: false, message: "Registration number is already registered" });
     createdUser = await User.create({ name, email, role: "DOCTOR", active: true, passwordHash: await bcrypt.hash(password, 12) });
-    const doctor = await Doctor.create({ userId: createdUser._id, name, specialization, qualification, registrationNumber, phone: phone || undefined, email, department: department || undefined, active: true });
+    const doctor = await Doctor.create({
+      userId: createdUser._id,
+      name,
+      specialization,
+      qualification,
+      registrationNumber,
+      phone: phone || undefined,
+      email,
+      department: department || undefined,
+      image,
+      description,
+      experience,
+      tags,
+      active: true,
+    });
     return res.status(201).json({ success: true, message: "Doctor account created", doctor: { id: doctor._id, name, email, specialization, qualification, registrationNumber } });
   } catch (error) {
     if (createdUser?._id) await User.deleteOne({ _id: createdUser._id }).catch(() => {});
@@ -189,9 +211,46 @@ export const resetManagedUserPassword = async (req, res) => {
 
 export const updateManagedUserStatus = async (req, res) => {
   try {
-    const user = await User.findOneAndUpdate({ _id: req.params.id, role: { $in: ["DOCTOR", "RECEPTIONIST"] } }, { active: Boolean(req.body?.active) }, { new: true }).select(safeUserFields);
-    if (!user) return res.status(404).json({ success: false, message: "Doctor or staff account not found" });
-    if (String(user._id) === String(req.user.id) && !user.active) return res.status(400).json({ success: false, message: "You cannot deactivate your own account" });
+    if (typeof req.body?.active !== "boolean") {
+      return res.status(400).json({ success: false, message: "Account status must be true or false" });
+    }
+
+    const existingUser = await User.findOne({
+      _id: req.params.id,
+      role: { $in: ["DOCTOR", "RECEPTIONIST"] },
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({ success: false, message: "Doctor or staff account not found" });
+    }
+
+    if (String(existingUser._id) === String(req.user.id) && !req.body.active) {
+      return res.status(400).json({ success: false, message: "You cannot deactivate your own account" });
+    }
+
+    existingUser.active = req.body.active;
+    await existingUser.save();
+
+    if (existingUser.role === "DOCTOR") {
+      await Doctor.findOneAndUpdate(
+        { userId: existingUser._id },
+        { active: req.body.active },
+        { new: true }
+      );
+    }
+
+    const user = {
+      _id: existingUser._id,
+      name: existingUser.name,
+      email: existingUser.email,
+      role: existingUser.role,
+      active: existingUser.active,
+      createdAt: existingUser.createdAt,
+    };
+
     return res.json({ success: true, user });
-  } catch (error) { return res.status(400).json({ success: false, message: "Unable to update account status" }); }
+  } catch (error) {
+    console.error("Update managed account status error:", error.message);
+    return res.status(400).json({ success: false, message: "Unable to update account status" });
+  }
 };
