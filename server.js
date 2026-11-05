@@ -16,6 +16,7 @@ import adminAuthRoutes from "./routes/adminAuthRoutes.js";
 import staffAuthRoutes from "./routes/staffAuthRoutes.js";
 import staffRoutes from "./routes/staffRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
 
 import Doctor from "./models/Doctor.js";
 import User from "./models/User.js";
@@ -77,6 +78,7 @@ app.use("/api/staff", staffRoutes);
 // ================================
 
 app.use("/api/admin", adminRoutes);
+app.use("/api/uploads", uploadRoutes);
 
 // ================================
 // Doctor Routes
@@ -162,6 +164,9 @@ app.use((error, req, res, next) => {
     return next(error);
   }
 
+  if (error.code === "LIMIT_FILE_SIZE") return res.status(413).json({ success: false, message: "Image must be 5 MB or smaller" });
+  if (error.message?.includes("Only JPG")) return res.status(400).json({ success: false, message: error.message });
+
   if (error.type === "entity.too.large") {
     return res.status(413).json({
       success: false,
@@ -195,6 +200,9 @@ const startServer = async () => {
     "JWT_SECRET",
     "AADHAAR_HASH_SECRET",
     "CLIENT_URL",
+    "CLOUDINARY_CLOUD_NAME",
+    "CLOUDINARY_API_KEY",
+    "CLOUDINARY_API_SECRET",
   ];
 
   const missingVariables = requiredVariables.filter(

@@ -2,7 +2,7 @@ import express from "express";
 import { authenticateToken } from "../middleware/authMiddleware.js";
 import { allowRoles } from "../middleware/roleMiddleware.js";
 import {
-  createAdmission, createDoctorAccount, createStaffAccount, dischargeAdmission,
+  createAdmission, createDoctorAccount, createStaffAccount, dischargeAdmission, updateDoctorProfile, updateStaffProfile,
   getAdminOverview, getPatientDetails, listAdmissions, listDoctors,
   listManagedUsers, listPatients, listTodayAppointments,
   resetManagedUserPassword, updateManagedUserStatus,
@@ -13,10 +13,12 @@ router.use(authenticateToken, allowRoles("SUPER_ADMIN"));
 router.get("/overview", getAdminOverview);
 router.get("/users", listManagedUsers);
 router.post("/staff", createStaffAccount);
+router.patch("/staff/:id", updateStaffProfile);
 router.get("/patients", listPatients);
 router.get("/patients/:id", getPatientDetails);
 router.get("/doctors", listDoctors);
 router.post("/doctors", createDoctorAccount);
+router.patch("/doctors/:id", updateDoctorProfile);
 router.get("/appointments/today", listTodayAppointments);
 router.get("/admissions", listAdmissions);
 router.post("/admissions", createAdmission);
