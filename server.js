@@ -9,6 +9,7 @@ import appointmentRoutes from "./routes/appointmentRoutes.js";
 import doctorAuthRoutes from "./routes/doctorAuthRoutes.js";
 import doctorAppointmentRoutes from "./routes/doctorAppointmentRoutes.js";
 import doctorPatientRoutes from "./routes/doctorPatientRoutes.js";
+import doctorAdmissionRoutes from "./routes/doctorAdmissionRoutes.js";
 import consultationRoutes from "./routes/consultationRoutes.js";
 
 // Super Admin and Staff Routes
@@ -94,6 +95,11 @@ app.use(
 app.use(
   "/api/doctor/patients",
   doctorPatientRoutes
+);
+
+app.use(
+  "/api/doctor/admissions",
+  doctorAdmissionRoutes
 );
 
 app.use(

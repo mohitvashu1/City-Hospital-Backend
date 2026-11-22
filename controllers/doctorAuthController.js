@@ -147,6 +147,7 @@ export const loginDoctor = async (req, res) => {
         phone: doctor.phone,
         email: doctor.email,
         department: doctor.department,
+        image: doctor.image || "",
         active: doctor.active,
       },
     });
